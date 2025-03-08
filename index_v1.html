@@ -1,0 +1,2654 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zomato Delivery Madness 3D</title>
+    <script src="three.js"></script>
+    <script>
+        // Check for WebGL support
+        if (!window.WebGLRenderingContext) {
+            alert('Your browser does not support WebGL. Please use a modern browser.');
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1C1C1C;
+            overflow: hidden;
+        }
+        #score {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            z-index: 100;
+        }
+        #timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            z-index: 100;
+        }
+        #title {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #E23744;
+            font-family: Arial;
+            font-size: 32px;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 2px 2px #000;
+        }
+        #combo {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            color: #FFD700;
+            font-family: Arial;
+            font-size: 20px;
+            z-index: 100;
+        }
+        #delivery-type {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            color: #FFD700;
+            font-family: Arial;
+            font-size: 20px;
+            z-index: 100;
+        }
+        #direction-arrow {
+            display: none;
+        }
+
+        #distance-indicator {
+            display: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1) rotate(var(--arrow-rotation)); }
+            50% { transform: scale(1.1) rotate(var(--arrow-rotation)); }
+            100% { transform: scale(1) rotate(var(--arrow-rotation)); }
+        }
+
+        .effect {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99;
+        }
+        #city-selector {
+            position: fixed;
+            top: 20px;
+            right: 380px;
+            padding: 8px 16px;
+            background: #E23744;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            font-family: Arial;
+        }
+
+        #event-selector {
+            position: fixed;
+            top: 20px;
+            right: 520px;
+            padding: 8px 16px;
+            background: #FFD700;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            font-family: Arial;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            z-index: 1000;
+            font-family: Arial;
+        }
+
+        .modal h2 {
+            color: #E23744;
+            margin-top: 0;
+        }
+
+        .modal-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .modal-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-option img {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        .modal-option .details {
+            flex-grow: 1;
+        }
+
+        .modal-option h3 {
+            margin: 0;
+            color: #FFD700;
+        }
+
+        .modal-option p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #achievements-panel {
+            position: fixed;
+            right: -300px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 280px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px 0 0 15px;
+            transition: right 0.3s;
+            z-index: 100;
+        }
+
+        #achievements-panel.show {
+            right: 0;
+        }
+
+        .achievement-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+
+        .achievement-item h3 {
+            margin: 0;
+            color: #FFD700;
+        }
+
+        .achievement-item p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        #message-queue {
+            position: fixed;
+            left: 20px;
+            top: 150px;
+            width: 300px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 60</div>
+    <div id="title">Zomato Delivery Madness 3D</div>
+    <div id="combo"></div>
+    <div id="delivery-type"></div>
+    <div id="achievements-panel">
+        <h2>Achievements</h2>
+        <div id="achievements-list"></div>
+    </div>
+    <script>
+        // Add debug logging
+        console.log('Starting game initialization...');
+
+        // Check if Three.js is loaded
+        if (typeof THREE === 'undefined') {
+            console.error('Three.js failed to load');
+            document.body.innerHTML += '<div style="color: white; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Arial;">Failed to load 3D engine. Please check your internet connection and refresh.</div>';
+            throw new Error('Three.js not loaded');
+        }
+
+        // Test WebGL compatibility
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                throw new Error('WebGL not supported');
+            }
+        } catch (e) {
+            console.error('WebGL error:', e);
+            document.body.innerHTML += '<div style="color: white; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Arial;">Your browser does not support 3D graphics. Please use a modern browser.</div>';
+            throw e;
+        }
+
+        let scene, camera, renderer, player;
+        let deliveryTargets = [], obstacles = [], powerUps = [];
+        let specialObstacles = [];
+        let messageQueue = [];  // Moved to top with other global variables
+        let achievements = [];  // Initialize achievements array
+        const MAX_MESSAGES = 5;
+        let gameState = {
+            score: 0,
+            timeLeft: 60,
+            combo: 0,
+            comboTimer: 0,
+            pointMultiplier: 1,
+            isInvulnerable: false
+        };
+
+        const COLORS = {
+            PRIMARY: 0xE23744,    // Zomato red
+            SECONDARY: 0x1C1C1C,  // Dark gray
+            ACCENT: 0xCB202D,     // Dark red
+            OBSTACLE: 0xFF4444,   // Warning red
+            AUTO: 0xFED350,       // Auto yellow (more Indian)
+            COW: 0xFFFFFF,        // Cow white
+            VENDOR: 0xFF9933,     // Saffron for vendors
+            ROAD: 0x666666,       // Indian street color
+            BUILDING: 0xFFF5E1    // Cream color for buildings
+        };
+
+        // Add food types and restaurants
+        const FOOD_TYPES = [
+            { name: "Butter Chicken", color: 0xE23744, points: 15, restaurant: "Empire Restaurant" },
+            { name: "Hyderabadi Biryani", color: 0xFFD700, points: 20, restaurant: "Meghana Foods" },
+            { name: "Masala Dosa", color: 0xDEB887, points: 12, restaurant: "CTR" },
+            { name: "Andhra Meals", color: 0xF0E68C, points: 15, restaurant: "Nagarjuna" },
+            { name: "Chinese", color: 0xCD853F, points: 10, restaurant: "Beijing Bites" },
+            { name: "Quick Commerce", color: 0x32CD32, points: 25, restaurant: function() {
+                const stores = ["Blinkit", "Zepto", "Instamart"];
+                return stores[Math.floor(Math.random() * stores.length)];
+            }() }
+        ];
+
+        // Add nextRestaurant variable at the top with other game state variables
+        let currentDelivery = null;
+        let restaurants = [];
+        let houses = [];
+        let consecutiveDeliveries = 0;
+        let targetHouse = null;
+        let nextRestaurant = null;  // Track the next restaurant to pick up from
+
+        // Add high score system
+        let highScores = JSON.parse(localStorage.getItem('zomatoHighScores')) || [];
+        
+        function saveHighScore(score) {
+            highScores.push(score);
+            highScores.sort((a, b) => b - a);
+            highScores = highScores.slice(0, 5); // Keep top 5 scores
+            localStorage.setItem('zomatoHighScores', JSON.stringify(highScores));
+        }
+
+        function showHighScores() {
+            const scoresDiv = document.createElement('div');
+            scoresDiv.style.position = 'fixed';
+            scoresDiv.style.top = '50%';
+            scoresDiv.style.left = '50%';
+            scoresDiv.style.transform = 'translate(-50%, -50%)';
+            scoresDiv.style.color = 'white';
+            scoresDiv.style.fontSize = '24px';
+            scoresDiv.style.fontFamily = 'Arial';
+            scoresDiv.style.textAlign = 'center';
+            scoresDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            scoresDiv.style.padding = '20px';
+            scoresDiv.style.borderRadius = '10px';
+            scoresDiv.style.zIndex = '1000';
+
+            let content = '<h2 style="color: #E23744">High Scores</h2>';
+            if (highScores.length === 0) {
+                content += '<p>No high scores yet!</p>';
+            } else {
+                content += '<ol style="list-style-position: inside; padding-left: 0;">';
+                highScores.forEach(score => {
+                    content += `<li>${score} points</li>`;
+                });
+                content += '</ol>';
+            }
+            content += '<button id="closeScores" style="margin-top: 15px; padding: 8px 16px; background: #E23744; border: none; color: white; border-radius: 5px; cursor: pointer;">Close</button>';
+            
+            scoresDiv.innerHTML = content;
+            document.body.appendChild(scoresDiv);
+
+            document.getElementById('closeScores').onclick = () => {
+                document.body.removeChild(scoresDiv);
+            };
+        }
+
+        // Add traffic system
+        let vehicles = [];
+        const VEHICLE_TYPES = [
+            { name: 'car', width: 1.2, length: 2.5, color: 0x4444FF },
+            { name: 'truck', width: 1.5, length: 3.5, color: 0x44FF44 },
+            { name: 'bike', width: 0.8, length: 1.8, color: 0xFF4444 }
+        ];
+
+        function createRestaurant(foodType) {
+            const restaurant = new THREE.Group();
+            
+            // Main building - reduced by 50%
+            const buildingGeometry = new THREE.BoxGeometry(1.5, 1.25, 1.5);
+            const buildingMaterial = new THREE.MeshStandardMaterial({ 
+                color: foodType.name === "Quick Commerce" ? 0xFFD700 : 0x990000,
+                metalness: 0.1,
+                roughness: 0.9
+            });
+            const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+            
+            // Add windows - reduced by 50%
+            const windowGeometry = new THREE.PlaneGeometry(0.25, 0.4);
+            const windowMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x88CCFF,
+                metalness: 0.5,
+                roughness: 0.2
+            });
+            
+            // Front windows - adjusted positions
+            [-0.4, 0.4].forEach(x => {
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                window.position.set(x, 0, 0.76);
+                building.add(window);
+            });
+
+            // Side windows - adjusted positions
+            [-0.4, 0.4].forEach(x => {
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                window.position.set(0.76, 0, x);
+                window.rotation.y = Math.PI / 2;
+                building.add(window);
+            });
+
+            // Door - reduced by 50%
+            const doorGeometry = new THREE.PlaneGeometry(0.4, 0.8);
+            const doorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,
+                metalness: 0.3,
+                roughness: 0.7
+            });
+            const door = new THREE.Mesh(doorGeometry, doorMaterial);
+            door.position.set(0, -0.2, 0.76);
+            building.add(door);
+
+            // Restaurant sign - reduced by 50%
+            const signGroup = new THREE.Group();
+            
+            // Sign background
+            const signGeometry = new THREE.BoxGeometry(1.6, 0.4, 0.1);
+            const signMaterial = new THREE.MeshStandardMaterial({ 
+                color: foodType.color,
+                metalness: 0.3,
+                roughness: 0.7
+            });
+            const sign = new THREE.Mesh(signGeometry, signMaterial);
+            signGroup.add(sign);
+
+            // Sign border
+            const borderGeometry = new THREE.BoxGeometry(1.7, 0.5, 0.05);
+            const borderMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xFFFFFF,
+                metalness: 0.5,
+                roughness: 0.5
+            });
+            const border = new THREE.Mesh(borderGeometry, borderMaterial);
+            border.position.z = -0.05;
+            signGroup.add(border);
+
+            signGroup.position.set(0, 0.75, 0.8);
+            restaurant.add(signGroup);
+
+            // Add awning - reduced by 50%
+            const awningGeometry = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8, 1, false, 0, Math.PI);
+            const awningMaterial = new THREE.MeshStandardMaterial({ 
+                color: foodType.color,
+                metalness: 0.1,
+                roughness: 0.9,
+                side: THREE.DoubleSide
+            });
+            const awning = new THREE.Mesh(awningGeometry, awningMaterial);
+            awning.rotation.z = Math.PI / 2;
+            awning.rotation.y = Math.PI / 2;
+            awning.position.set(0, 0.4, 0.75);
+            restaurant.add(awning);
+
+            // Add decorative elements - reduced by 50%
+            const plantGeometry = new THREE.CylinderGeometry(0.1, 0.075, 0.2, 8);
+            const plantMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+            const potMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+
+            [-0.6, 0.6].forEach(x => {
+                const pot = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.075, 0.1, 0.15, 8),
+                    potMaterial
+                );
+                const plant = new THREE.Mesh(plantGeometry, plantMaterial);
+                plant.position.y = 0.15;
+                
+                const plantGroup = new THREE.Group();
+                plantGroup.add(pot);
+                plantGroup.add(plant);
+                plantGroup.position.set(x, -0.625, 0.6);
+                restaurant.add(plantGroup);
+            });
+
+            // Add base building to restaurant group
+            restaurant.add(building);
+            
+            // Position along the roads
+            const roadSpacing = 8;
+            const roadOffset = 3;
+            const maxOffset = 19;  // Increased from 15 to 19
+            
+            // Choose a random road intersection with larger range
+            const x = (Math.floor(Math.random() * 5) - 2) * roadSpacing;  // Increased range
+            const z = (Math.floor(Math.random() * 5) - 2) * roadSpacing;  // Increased range
+            
+            // Randomly offset from intersection with bounds checking
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const isHorizontal = Math.random() < 0.5;
+            
+            if (isHorizontal) {
+                restaurant.position.x = Math.max(-maxOffset, Math.min(maxOffset, x + (Math.random() * 4 - 2)));
+                restaurant.position.z = Math.max(-maxOffset, Math.min(maxOffset, z + (side * roadOffset)));
+            } else {
+                restaurant.position.x = Math.max(-maxOffset, Math.min(maxOffset, x + (side * roadOffset)));
+                restaurant.position.z = Math.max(-maxOffset, Math.min(maxOffset, z + (Math.random() * 4 - 2)));
+            }
+            
+            restaurant.position.y = 0.625; // Reduced height by 50%
+            
+            // Rotate to face the road
+            if (isHorizontal) {
+                restaurant.rotation.y = side > 0 ? Math.PI : 0;
+            } else {
+                restaurant.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+            }
+            
+            restaurant.foodType = foodType;
+            restaurant.isPickupPoint = true;
+            
+            scene.add(restaurant);
+            restaurants.push(restaurant);
+        }
+
+        function createHouse() {
+            const house = new THREE.Group();
+            
+            // Main building
+            const buildingGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const buildingMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xF5F5F5,  // White walls
+                metalness: 0.1,
+                roughness: 0.9
+            });
+            const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+            
+            // Roof (more detailed)
+            const roofGeometry = new THREE.ConeGeometry(1.8, 1.2, 4);
+            const roofMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,  // Brown roof
+                metalness: 0.2,
+                roughness: 0.8
+            });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 1.6;
+            roof.rotation.y = Math.PI / 4;
+            house.add(roof);
+
+            // Add windows
+            const windowGeometry = new THREE.PlaneGeometry(0.4, 0.6);
+            const windowMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x87CEEB,  // Sky blue
+                metalness: 0.5,
+                roughness: 0.2
+            });
+            
+            // Front windows
+            [-0.5, 0.5].forEach(x => {
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                window.position.set(x, 0.2, 1.01);
+                building.add(window);
+            });
+
+            // Side windows
+            [-0.5, 0.5].forEach(x => {
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                window.position.set(1.01, 0.2, x);
+                window.rotation.y = Math.PI / 2;
+                building.add(window);
+            });
+
+            // Door
+            const doorGeometry = new THREE.PlaneGeometry(0.6, 1.2);
+            const doorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,  // Brown door
+                metalness: 0.3,
+                roughness: 0.7
+            });
+            const door = new THREE.Mesh(doorGeometry, doorMaterial);
+            door.position.set(0, -0.4, 1.01);
+            building.add(door);
+
+            // Add doorstep
+            const stepGeometry = new THREE.BoxGeometry(0.8, 0.1, 0.4);
+            const stepMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x808080,  // Gray steps
+                metalness: 0.2,
+                roughness: 0.8
+            });
+            const step = new THREE.Mesh(stepGeometry, stepMaterial);
+            step.position.set(0, -0.95, 1.2);
+            building.add(step);
+
+            // Add chimney
+            const chimneyGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const chimneyMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,  // Brown chimney
+                metalness: 0.2,
+                roughness: 0.9
+            });
+            const chimney = new THREE.Mesh(chimneyGeometry, chimneyMaterial);
+            chimney.position.set(0.6, 1.8, 0.6);
+            house.add(chimney);
+
+            // Add some decorative elements
+            const bushGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+            const bushMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x228B22,  // Forest green
+                metalness: 0.1,
+                roughness: 0.9
+            });
+
+            // Add bushes in front of the house
+            [-0.8, 0.8].forEach(x => {
+                const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+                bush.position.set(x, -0.7, 1);
+                bush.scale.set(1, 0.7, 0.7);
+                house.add(bush);
+            });
+
+            // Add house number
+            const houseNumberGeometry = new THREE.PlaneGeometry(0.3, 0.2);
+            const houseNumberMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xFFD700,  // Gold
+                metalness: 0.6,
+                roughness: 0.4
+            });
+            const houseNumber = new THREE.Mesh(houseNumberGeometry, houseNumberMaterial);
+            houseNumber.position.set(-0.8, 0.5, 1.02);
+            building.add(houseNumber);
+
+            // Add marker arrow above house (keep existing functionality)
+            const arrowGeometry = new THREE.ConeGeometry(0.3, 0.6, 4);
+            const arrowMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xFFD700,
+                transparent: true,
+                opacity: 0
+            });
+            const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+            arrow.position.y = 3;
+            arrow.rotation.x = Math.PI;
+            house.arrow = arrow;
+            house.add(arrow);
+
+            house.add(building);
+            
+            // Position along the roads
+            const roadSpacing = 8;
+            const roadOffset = 3;
+            const maxOffset = 19;  // Increased from 15 to 19
+            
+            // Choose a random road intersection with larger range
+            const x = (Math.floor(Math.random() * 5) - 2) * roadSpacing;  // Increased range
+            const z = (Math.floor(Math.random() * 5) - 2) * roadSpacing;  // Increased range
+            
+            // Randomly offset from intersection with bounds checking
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const isHorizontal = Math.random() < 0.5;
+            
+            if (isHorizontal) {
+                house.position.x = Math.max(-maxOffset, Math.min(maxOffset, x + (Math.random() * 4 - 2)));
+                house.position.z = Math.max(-maxOffset, Math.min(maxOffset, z + (side * roadOffset)));
+            } else {
+                house.position.x = Math.max(-maxOffset, Math.min(maxOffset, x + (side * roadOffset)));
+                house.position.z = Math.max(-maxOffset, Math.min(maxOffset, z + (Math.random() * 4 - 2)));
+            }
+            
+            house.position.y = 1;
+            
+            // Rotate to face the road
+            if (isHorizontal) {
+                house.rotation.y = side > 0 ? Math.PI : 0;
+            } else {
+                house.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+            }
+            
+            house.isDeliveryPoint = true;
+            house.isHighlighted = false;
+            
+            scene.add(house);
+            houses.push(house);
+            return house;
+        }
+
+        function highlightTargetHouse(house) {
+            // Reset all houses
+            houses.forEach(h => {
+                if (h.arrow) {
+                    scene.remove(h.arrow);
+                    h.arrow = null;
+                }
+                if (h.outline) {
+                    scene.remove(h.outline);
+                    h.outline = null;
+                }
+            });
+
+            if (house) {
+                // Add neon green arrow above house (matching restaurant style)
+                const arrowGeometry = new THREE.ConeGeometry(0.3, 0.6, 4);
+                const arrowMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x00FF00,  // Bright neon green arrow
+                    metalness: 0.3,
+                    roughness: 0.7,
+                    emissive: 0x00FF00,  // Add emissive for extra glow
+                    emissiveIntensity: 0.5
+                });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.position.copy(house.position);
+                arrow.position.y = 3;  // Position above the house
+                arrow.rotation.x = Math.PI;  // Point downward
+                scene.add(arrow);
+                house.arrow = arrow;
+
+                // Add neon green outline effect (matching restaurant style)
+                const outlineGeometry = new THREE.BoxGeometry(2.2, 2.2, 2.2);
+                const outlineMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00FF00,  // Bright neon green outline
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.7  // Increased opacity for better visibility
+                });
+                const outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+                outline.position.copy(house.position);
+                outline.scale.set(1.2, 1.2, 1.2);
+                scene.add(outline);
+                house.outline = outline;
+            }
+        }
+
+        // Initialize Three.js scene
+        function init() {
+            try {
+                console.log('Initializing Three.js...');
+                
+                // Create message queue container if it doesn't exist
+                if (!document.getElementById('message-queue')) {
+                    const messageContainer = document.createElement('div');
+                    messageContainer.id = 'message-queue';
+                    messageContainer.style.position = 'fixed';
+                    messageContainer.style.left = '20px';
+                    messageContainer.style.top = '150px';
+                    messageContainer.style.width = '400px';
+                    messageContainer.style.zIndex = '1000';
+                    document.body.appendChild(messageContainer);
+                }
+                
+                // Create scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1C1C1C);
+                console.log('Scene created');
+
+                // Create camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 20, 15); // Higher up for better overview
+                camera.lookAt(0, 0, 0);
+                camera.rotation.z = 0;
+                console.log('Camera created');
+
+                // Create renderer with error handling
+                try {
+                    renderer = new THREE.WebGLRenderer({ 
+                        antialias: true,
+                        alpha: true,
+                        powerPreference: "high-performance"
+                    });
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    renderer.setClearColor(0x1C1C1C, 1);
+                    document.body.appendChild(renderer.domElement);
+                    console.log('Renderer created');
+                } catch (rendererError) {
+                    console.error('Failed to create renderer:', rendererError);
+                    document.body.innerHTML += '<div style="color: white; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Arial;">Failed to initialize 3D graphics. Please ensure your browser supports WebGL.</div>';
+                    return;
+                }
+
+                // Add lights with more intensity
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                directionalLight.position.set(5, 5, 5);
+                scene.add(directionalLight);
+                console.log('Lights added');
+
+                // Create and add ground with Indian street texture
+                const ground = createGround();
+                scene.add(ground);
+
+                // Add roads in a grid pattern
+                const roadWidth = 2; // Reduced from 3 to 2
+                const roadColor = 0x404040;  // Dark gray
+                const roadMaterial = new THREE.MeshStandardMaterial({
+                    color: roadColor,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+
+                // Create horizontal roads with adjusted spacing
+                const roadSpacing = 8;
+                for (let i = -15; i <= 15; i += roadSpacing) { // Increased range from ±12 to ±15
+                    const horizontalRoadGeometry = new THREE.PlaneGeometry(40, roadWidth); // Increased from 30 to 40
+                    const horizontalRoad = new THREE.Mesh(horizontalRoadGeometry, roadMaterial);
+                    horizontalRoad.rotation.x = -Math.PI / 2;
+                    horizontalRoad.position.z = i;
+                    scene.add(horizontalRoad);
+
+                    // Add road markings with increased range
+                    for (let x = -16; x <= 16; x += 5) { // Increased range from ±13 to ±16
+                        const line = new THREE.Mesh(
+                            new THREE.PlaneGeometry(1, 0.15),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xFFFFFF,
+                                roughness: 0.5,
+                                metalness: 0.2
+                            })
+                        );
+                        line.rotation.x = -Math.PI / 2;
+                        line.position.set(x, 0.01, i);
+                        scene.add(line);
+                    }
+                }
+
+                // Create vertical roads with adjusted spacing
+                for (let i = -15; i <= 15; i += roadSpacing) { // Increased range from ±12 to ±15
+                    const verticalRoadGeometry = new THREE.PlaneGeometry(roadWidth, 40); // Increased from 30 to 40
+                    const verticalRoad = new THREE.Mesh(verticalRoadGeometry, roadMaterial);
+                    verticalRoad.rotation.x = -Math.PI / 2;
+                    verticalRoad.position.x = i;
+                    scene.add(verticalRoad);
+
+                    // Add road markings with increased range
+                    for (let z = -16; z <= 16; z += 5) { // Increased range from ±13 to ±16
+                        const line = new THREE.Mesh(
+                            new THREE.PlaneGeometry(1, 0.15),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xFFFFFF,
+                                roughness: 0.5,
+                                metalness: 0.2
+                            })
+                        );
+                        line.rotation.x = -Math.PI / 2;
+                        line.rotation.z = Math.PI / 2;
+                        line.position.set(i, 0.01, z);
+                        scene.add(line);
+                    }
+                }
+
+                // Add sidewalks along all roads
+                const sidewalkMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x808080,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+
+                // Add sidewalks for horizontal roads
+                for (let i = -80; i <= 80; i += roadSpacing) {
+                    [-roadWidth/2 - 0.3, roadWidth/2 + 0.3].forEach(offset => { // Reduced sidewalk offset
+                        const sidewalk = new THREE.Mesh(
+                            new THREE.BoxGeometry(200, 0.1, 0.6), // Narrower sidewalks
+                            sidewalkMaterial
+                        );
+                        sidewalk.position.set(0, 0.1, i + offset);
+                        scene.add(sidewalk);
+                    });
+                }
+
+                // Add sidewalks for vertical roads
+                for (let i = -80; i <= 80; i += roadSpacing) {
+                    [-roadWidth/2 - 0.3, roadWidth/2 + 0.3].forEach(offset => { // Reduced sidewalk offset
+                        const sidewalk = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.6, 0.1, 200), // Narrower sidewalks
+                            sidewalkMaterial
+                        );
+                        sidewalk.position.set(i + offset, 0.1, 0);
+                        scene.add(sidewalk);
+                    });
+                }
+
+                // Add some random grass patches
+                const grassPatchGeometry = new THREE.CircleGeometry(1, 6);
+                const darkGrassMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2E4A0A,  // Darker grass
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+
+                for (let i = 0; i < 50; i++) {
+                    const grassPatch = new THREE.Mesh(grassPatchGeometry, darkGrassMaterial);
+                    grassPatch.rotation.x = -Math.PI / 2;
+                    
+                    // Position away from roads
+                    let x, z;
+                    do {
+                        x = Math.random() * 90 - 45;
+                        z = Math.random() * 90 - 45;
+                    } while (Math.abs(x) < roadWidth/2 + 1 || Math.abs(z) < roadWidth/2 + 1);
+                    
+                    grassPatch.position.set(x, 0.01, z);
+                    grassPatch.scale.set(
+                        Math.random() * 2 + 1,
+                        Math.random() * 2 + 1,
+                        1
+                    );
+                    grassPatch.rotation.z = Math.random() * Math.PI;
+                    scene.add(grassPatch);
+                }
+
+                console.log('Ground and roads created');
+
+                // Create player
+                createPlayer();
+                console.log('Player created');
+
+                // Create initial objects
+                FOOD_TYPES.forEach(foodType => {
+                    createRestaurant(foodType);
+                    // Add extra restaurants with lower probability (33% chance instead of 50%)
+                    if (Math.random() < 0.33) {
+                        createRestaurant(foodType);
+                    }
+                });
+                
+                for(let i = 0; i < 20; i++) { // Increased from 12 to 20 houses
+                    createHouse();
+                }
+                console.log('Game objects created');
+
+                // Add grid helper
+                const gridHelper = new THREE.GridHelper(100, 100, 0x666666, 0x444444);
+                scene.add(gridHelper);
+                console.log('Grid helper added');
+
+                // Create UI elements
+                createUIElements();
+                console.log('UI elements created');
+
+                // Create initial obstacles
+                createInitialObstacles();
+                console.log('Obstacles created');
+
+                // Start game loop
+                console.log('Starting animation loop...');
+                animate();
+
+                // Add event listeners
+                window.addEventListener('resize', onWindowResize, false);
+                document.addEventListener('keydown', onKeyDown);
+                document.addEventListener('keyup', onKeyUp);
+
+                // Start game timer
+                setInterval(updateTimer, 1000);
+                
+                console.log('Initialization complete');
+
+                // Select initial random restaurant for first pickup
+                highlightNextRestaurant();
+                showMessage('Find the restaurant with the blue arrow!', '#00BFFF');
+
+                // Create boundary walls
+                createBoundaryWalls();
+                console.log('Boundary walls created');
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                document.body.innerHTML += '<div style="color: white; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Arial;">An error occurred while initializing the game. Please refresh the page.</div>';
+            }
+        }
+
+        // Create UI elements
+        function createUIElements() {
+            // Add high score button
+            const highScoreBtn = document.createElement('button');
+            highScoreBtn.innerHTML = '🏆 High Scores';
+            highScoreBtn.style.position = 'fixed';
+            highScoreBtn.style.top = '20px';
+            highScoreBtn.style.right = '120px';
+            highScoreBtn.style.padding = '8px 16px';
+            highScoreBtn.style.background = '#E23744';
+            highScoreBtn.style.color = 'white';
+            highScoreBtn.style.border = 'none';
+            highScoreBtn.style.borderRadius = '5px';
+            highScoreBtn.style.cursor = 'pointer';
+            highScoreBtn.style.zIndex = '100';
+            highScoreBtn.onclick = showHighScores;
+            document.body.appendChild(highScoreBtn);
+
+            // Add social sharing button
+            const shareButton = document.createElement('button');
+            shareButton.innerHTML = '🐦 Share Score';
+            shareButton.style.position = 'fixed';
+            shareButton.style.top = '20px';
+            shareButton.style.right = '250px';
+            shareButton.style.padding = '8px 16px';
+            shareButton.style.background = '#1DA1F2';
+            shareButton.style.color = 'white';
+            shareButton.style.border = 'none';
+            shareButton.style.borderRadius = '5px';
+            shareButton.style.cursor = 'pointer';
+            shareButton.style.zIndex = '100';
+            shareButton.onclick = shareScore;
+            document.body.appendChild(shareButton);
+        }
+
+        // Create initial obstacles
+        function createInitialObstacles() {
+            // Create initial vehicles - reduced from 3 to 2
+            for (let i = 0; i < 2; i++) {
+                createVehicle();
+            }
+
+            // Create initial obstacles - reduced from 5 to 3
+            for (let i = 0; i < 3; i++) {
+                const types = ['auto', 'cow', 'vendor', 'vehicle'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let obstacle;
+                switch(type) {
+                    case 'auto':
+                        obstacle = createAutoRickshaw();
+                        break;
+                    case 'cow':
+                        obstacle = createCow();
+                        break;
+                    case 'vendor':
+                        obstacle = createStreetVendor();
+                        break;
+                    default:
+                        createVehicle();
+                        continue;
+                }
+
+                // Set random position and direction
+                const isHorizontal = Math.random() < 0.5;
+                const position = (Math.random() - 0.5) * 20; // Reduced from 40 to 20
+                const direction = Math.random() < 0.5 ? 1 : -1;
+
+                if (isHorizontal) {
+                    obstacle.position.set(-15 * direction, 0.6, position); // Reduced from -25 to -15
+                    obstacle.rotation.y = direction > 0 ? -Math.PI / 2 : Math.PI / 2;
+                } else {
+                    obstacle.position.set(position, 0.6, -15 * direction); // Reduced from -25 to -15
+                    obstacle.rotation.y = direction > 0 ? Math.PI : 0;
+                }
+
+                // Add movement properties
+                obstacle.speed = 0.1 + Math.random() * 0.1;
+                obstacle.direction = direction;
+                obstacle.isHorizontal = isHorizontal;
+                
+                // Add erratic movement for auto-rickshaws
+                if (obstacle.userData.type === 'auto') {
+                    obstacle.zigzagPhase = 0;
+                    obstacle.zigzagSpeed = 0.05;
+                }
+
+                scene.add(obstacle);
+                specialObstacles.push(obstacle);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const keys = { left: false, right: false, up: false, down: false };
+
+        function onKeyDown(event) {
+            switch(event.key) {
+                case 'ArrowLeft': keys.left = true; break;
+                case 'ArrowRight': keys.right = true; break;
+                case 'ArrowUp': keys.up = true; break;
+                case 'ArrowDown': keys.down = true; break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch(event.key) {
+                case 'ArrowLeft': keys.left = false; break;
+                case 'ArrowRight': keys.right = false; break;
+                case 'ArrowUp': keys.up = false; break;
+                case 'ArrowDown': keys.down = false; break;
+            }
+        }
+
+        function updatePlayer() {
+            const speed = 0.2;
+            let moved = false;
+            const newPosition = player.position.clone();
+            const cityBoundary = 20;  // Increased from 16 to 20 to match new city size
+
+            if (keys.left) {
+                newPosition.x -= speed;
+                player.rotation.y = Math.PI / 2;
+                moved = true;
+            }
+            if (keys.right) {
+                newPosition.x += speed;
+                player.rotation.y = -Math.PI / 2;
+                moved = true;
+            }
+            if (keys.up) {
+                newPosition.z -= speed;
+                player.rotation.y = 0;
+                moved = true;
+            }
+            if (keys.down) {
+                newPosition.z += speed;
+                player.rotation.y = Math.PI;
+                moved = true;
+            }
+
+            // Diagonal movement
+            if (keys.up && keys.right) player.rotation.y = -Math.PI / 4;
+            if (keys.up && keys.left) player.rotation.y = Math.PI / 4;
+            if (keys.down && keys.right) player.rotation.y = -3 * Math.PI / 4;
+            if (keys.down && keys.left) player.rotation.y = 3 * Math.PI / 4;
+
+            // Check boundary collision - removed notification
+            if (Math.abs(newPosition.x) < cityBoundary && Math.abs(newPosition.z) < cityBoundary) {
+                player.position.copy(newPosition);
+            }
+
+            // Update camera position to follow player
+            if (moved) {
+                camera.position.x = player.position.x;
+                camera.position.z = player.position.z + 8;
+                camera.position.y = 18;
+                camera.lookAt(player.position.x, 0, player.position.z - 2);
+            }
+        }
+
+        function checkCollisions() {
+            const playerPos = player.position;
+
+            // Check restaurants for pickup
+            if (!currentDelivery) {
+                restaurants.forEach(restaurant => {
+                    if (playerPos.distanceTo(restaurant.position) < 2) {
+                        // Only allow pickup from the highlighted restaurant
+                        if (restaurant === nextRestaurant) {
+                            // Select random house as delivery target
+                            targetHouse = houses[Math.floor(Math.random() * houses.length)];
+                            highlightTargetHouse(targetHouse);
+
+                            currentDelivery = {
+                                foodType: restaurant.foodType,
+                                restaurant: restaurant.foodType.restaurant,
+                                targetHouse: targetHouse
+                            };
+                            
+                            const isQuickCommerce = restaurant.foodType.name === "Quick Commerce";
+                            showDeliveryType(`Picked up: ${restaurant.foodType.name} from ${isQuickCommerce ? 'Quick Commerce Store' : restaurant.foodType.restaurant}`, true);
+                            showMessage('Deliver to the house with the green arrow!', '#00FF00');
+                            
+                            // Add delivery bag visual effect
+                            const deliveryBag = player.children.find(child => child.isDeliveryBag);
+                            if (deliveryBag) {
+                                deliveryBag.material.color.setHex(restaurant.foodType.color);
+                            }
+
+                            // Remove restaurant highlight
+                            if (restaurant.arrow) {
+                                scene.remove(restaurant.arrow);
+                                restaurant.arrow = null;
+                            }
+                            if (restaurant.outline) {
+                                scene.remove(restaurant.outline);
+                                restaurant.outline = null;
+                            }
+                        }
+                        // Removed "Wrong restaurant" message
+                    }
+                });
+            }
+
+            // Check houses for delivery
+            if (currentDelivery) {
+                if (playerPos.distanceTo(currentDelivery.targetHouse.position) < 2) {
+                    // Calculate bonus points based on consecutive deliveries
+                    const basePoints = currentDelivery.foodType.points;
+                    const bonusMultiplier = Math.min(3, 1 + (consecutiveDeliveries * 0.5));
+                    const totalPoints = Math.floor(basePoints * bonusMultiplier);
+                    
+                    // Create delivery effect
+                    const particles = new THREE.Group();
+                    for (let i = 0; i < 10; i++) {
+                        const particleGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+                        const particleMaterial = new THREE.MeshBasicMaterial({
+                            color: currentDelivery.foodType.color,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                        particle.position.copy(currentDelivery.targetHouse.position);
+                        particle.velocity = new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.2,
+                            Math.random() * 0.2,
+                            (Math.random() - 0.5) * 0.2
+                        );
+                        particles.add(particle);
+                    }
+                    scene.add(particles);
+
+                    // Update score and show delivery message with bonus
+                    consecutiveDeliveries++;
+                    updateScore(totalPoints);
+                    const bonusText = consecutiveDeliveries > 1 ? ` (${consecutiveDeliveries}x bonus!)` : '';
+                    showDeliveryType(`Delivered ${currentDelivery.foodType.name} to customer${bonusText}`, false);
+
+                    // Reset delivery bag color
+                    const deliveryBag = player.children.find(child => child.isDeliveryBag);
+                    if (deliveryBag) {
+                        deliveryBag.material.color.setHex(COLORS.PRIMARY);
+                    }
+
+                    // Remove target house highlight
+                    highlightTargetHouse(null);
+
+                    // Animate particles
+                    const animateParticles = () => {
+                        particles.children.forEach(particle => {
+                            particle.position.add(particle.velocity);
+                            particle.material.opacity -= 0.02;
+                        });
+                        if (particles.children[0].material.opacity > 0) {
+                            requestAnimationFrame(animateParticles);
+                        } else {
+                            scene.remove(particles);
+                        }
+                    };
+                    animateParticles();
+
+                    // Select new random restaurant for next pickup
+                    highlightNextRestaurant();
+                    const nextIsQuickCommerce = nextRestaurant && nextRestaurant.foodType.name === "Quick Commerce";
+                    showMessage(`New order! Find the ${nextIsQuickCommerce ? 'Quick Commerce Store' : 'restaurant'} with the blue arrow!`, '#00BFFF');
+
+                    currentDelivery = null;
+                    targetHouse = null;
+                } else if (playerPos.distanceTo(houses.find(h => h !== currentDelivery.targetHouse).position) < 2) {
+                    // Wrong house penalty
+                    consecutiveDeliveries = 0;
+                    showDeliveryType("Wrong house! Find the one with the white arrow!", false);
+                }
+            }
+
+            // Check power-ups
+            powerUps.forEach((powerUp, index) => {
+                if (playerPos.distanceTo(powerUp.position) < 1.5) {
+                    scene.remove(powerUp);
+                    powerUps.splice(index, 1);
+                    applyPowerUp();
+                    setTimeout(createPowerUp, 10000);
+                }
+            });
+
+            checkAchievements();
+        }
+
+        function updateScore(points) {
+            gameState.score += points;
+            document.getElementById('score').textContent = `Score: ${gameState.score}`;
+        }
+
+        function updateTimer() {
+            if (gameState.timeLeft > 0) {
+                gameState.timeLeft--;
+                document.getElementById('timer').textContent = `Time: ${gameState.timeLeft}`;
+                if (gameState.timeLeft === 0) {
+                    endGame();
+                }
+            }
+        }
+
+        function applyPowerUp() {
+            gameState.pointMultiplier = 2;
+            setTimeout(() => { gameState.pointMultiplier = 1; }, 5000);
+        }
+
+        function endGame() {
+            saveHighScore(gameState.score);
+            
+            const endScreen = document.createElement('div');
+            endScreen.style.position = 'fixed';
+            endScreen.style.top = '50%';
+            endScreen.style.left = '50%';
+            endScreen.style.transform = 'translate(-50%, -50%)';
+            endScreen.style.color = 'white';
+            endScreen.style.fontSize = '32px';
+            endScreen.style.fontFamily = 'Arial';
+            endScreen.style.textAlign = 'center';
+            endScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            endScreen.style.padding = '30px';
+            endScreen.style.borderRadius = '15px';
+            endScreen.style.zIndex = '1000';
+
+            let content = `<h1 style="color: #E23744">Game Over!</h1>`;
+            content += `<p>Final Score: ${gameState.score}</p>`;
+            if (highScores.length === 0 || gameState.score > highScores[0]) {
+                content += '<p style="color: #FFD700">New High Score! 🏆</p>';
+            }
+            content += `<button id="viewScores" style="margin: 10px; padding: 8px 16px; background: #E23744; border: none; color: white; border-radius: 5px; cursor: pointer;">View High Scores</button>`;
+            content += `<button id="playAgain" style="margin: 10px; padding: 8px 16px; background: #32CD32; border: none; color: white; border-radius: 5px; cursor: pointer;">Play Again</button>`;
+            
+            endScreen.innerHTML = content;
+            document.body.appendChild(endScreen);
+
+            document.getElementById('viewScores').onclick = () => {
+                showHighScores();
+            };
+
+            document.getElementById('playAgain').onclick = () => {
+                location.reload();
+            };
+        }
+
+        function showDeliveryType(name, isPickup) {
+            const deliveryType = document.getElementById('delivery-type');
+            if (isPickup) {
+                deliveryType.textContent = `Order picked up: ${name}! Jaldi jaldi deliver karo!`;
+            } else {
+                deliveryType.textContent = `${name}! Delivery successful, shukriya!`;
+            }
+            deliveryType.style.opacity = '1';
+            deliveryType.style.color = isPickup ? '#32CD32' : '#FFD700';
+            deliveryType.style.transition = 'opacity 1s';
+            
+            setTimeout(() => {
+                deliveryType.style.opacity = '0';
+            }, 2000);
+        }
+
+        function createPlayer() {
+            // Create a group for the bike and rider
+            player = new THREE.Group();
+
+            // Motorcycle frame - more detailed
+            const bikeGroup = new THREE.Group();
+            
+            // Main frame - thicker and more defined
+            const mainFrameGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.2, 12);
+            const bikeMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.PRIMARY,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const mainFrame = new THREE.Mesh(mainFrameGeometry, bikeMaterial);
+            mainFrame.rotation.z = Math.PI / 4;
+            bikeGroup.add(mainFrame);
+
+            // Secondary frame tubes - more realistic structure
+            const secondaryFrameGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.8, 12);
+            const secondaryFrame = new THREE.Mesh(secondaryFrameGeometry, bikeMaterial);
+            secondaryFrame.rotation.z = -Math.PI / 6;
+            secondaryFrame.position.set(0.2, 0.2, 0);
+            bikeGroup.add(secondaryFrame);
+
+            // Add additional frame support
+            const supportFrameGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8);
+            const supportFrame = new THREE.Mesh(supportFrameGeometry, bikeMaterial);
+            supportFrame.rotation.z = Math.PI / 3;
+            supportFrame.position.set(-0.1, 0.3, 0);
+            bikeGroup.add(supportFrame);
+
+            // Engine block - more detailed
+            const engineGeometry = new THREE.Group();
+            // Main engine block
+            const engineBlockGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.3);
+            const engineMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2A2A2A,
+                metalness: 0.9,
+                roughness: 0.3
+            });
+            const engineBlock = new THREE.Mesh(engineBlockGeometry, engineMaterial);
+            engineGeometry.add(engineBlock);
+
+            // Engine details (cylinders)
+            const cylinderGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8);
+            const cylinderMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3A3A3A,
+                metalness: 0.8,
+                roughness: 0.4
+            });
+            [-0.1, 0.1].forEach(x => {
+                const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+                cylinder.rotation.x = Math.PI / 2;
+                cylinder.position.set(x, 0, 0.15);
+                engineGeometry.add(cylinder);
+            });
+            engineGeometry.position.set(0, 0, 0);
+            bikeGroup.add(engineGeometry);
+
+            // Exhaust pipe - more detailed
+            const exhaustGroup = new THREE.Group();
+            const exhaustGeometry = new THREE.CylinderGeometry(0.04, 0.05, 0.8, 8);
+            const exhaustMaterial = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                metalness: 0.9,
+                roughness: 0.3
+            });
+            const exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+            exhaust.rotation.z = Math.PI / 6;
+            exhaust.position.set(-0.2, -0.1, 0.1);
+            exhaustGroup.add(exhaust);
+
+            // Add exhaust tip
+            const exhaustTipGeometry = new THREE.CylinderGeometry(0.06, 0.04, 0.1, 8);
+            const exhaustTip = new THREE.Mesh(exhaustTipGeometry, exhaustMaterial);
+            exhaustTip.position.set(-0.4, -0.2, 0.1);
+            exhaustTip.rotation.z = Math.PI / 6;
+            exhaustGroup.add(exhaustTip);
+            bikeGroup.add(exhaustGroup);
+
+            // Enhanced handlebars
+            const handlebarGroup = new THREE.Group();
+            const handlebarStemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8);
+            const handlebarStem = new THREE.Mesh(handlebarStemGeometry, bikeMaterial);
+            handlebarStem.rotation.z = -Math.PI / 6;
+            handlebarStem.position.set(0.4, 0.4, 0);
+            handlebarGroup.add(handlebarStem);
+
+            // Curved handlebars
+            const handlebarGeometry = new THREE.TorusGeometry(0.2, 0.03, 8, 16, Math.PI);
+            const handlebar = new THREE.Mesh(handlebarGeometry, bikeMaterial);
+            handlebar.position.set(0.5, 0.6, 0);
+            handlebar.rotation.x = Math.PI / 2;
+            handlebarGroup.add(handlebar);
+
+            // Add handlebar grips with better detail
+            const gripGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8);
+            const gripMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x111111,
+                roughness: 0.9
+            });
+            [-0.2, 0.2].forEach(z => {
+                const grip = new THREE.Mesh(gripGeometry, gripMaterial);
+                grip.rotation.x = Math.PI / 2;
+                grip.position.set(0.5, 0.6, z);
+                handlebarGroup.add(grip);
+            });
+            bikeGroup.add(handlebarGroup);
+
+            // Enhanced seat
+            const seatGroup = new THREE.Group();
+            const seatBaseGeometry = new THREE.BoxGeometry(0.4, 0.05, 0.3);
+            const seatMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x111111,
+                roughness: 0.9
+            });
+            const seatBase = new THREE.Mesh(seatBaseGeometry, seatMaterial);
+            seatBase.position.set(-0.2, 0.5, 0);
+            seatGroup.add(seatBase);
+
+            // Add curved seat top
+            const seatTopGeometry = new THREE.BoxGeometry(0.35, 0.08, 0.25);
+            const seatTop = new THREE.Mesh(seatTopGeometry, seatMaterial);
+            seatTop.position.set(-0.2, 0.55, 0);
+            // Round the edges by scaling
+            seatTop.scale.set(1, 0.8, 0.9);
+            seatGroup.add(seatTop);
+            bikeGroup.add(seatGroup);
+
+            // Enhanced wheels with spokes
+            const wheelGroup = new THREE.Group();
+            
+            // Improved tire geometry
+            const tireGeometry = new THREE.TorusGeometry(0.3, 0.06, 16, 32);
+            const tireMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x222222,
+                metalness: 0.1,
+                roughness: 0.9
+            });
+
+            // Improved rim geometry
+            const rimGeometry = new THREE.TorusGeometry(0.3, 0.02, 8, 32);
+            const rimMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xCCCCCC,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+
+            // More detailed spokes
+            const spokeGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.58, 4);
+            const spokeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xCCCCCC,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+
+            // Create front and back wheels with more spokes
+            [-0.5, 0.5].forEach(x => {
+                const wheelComplete = new THREE.Group();
+                
+                // Add tire
+                const tire = new THREE.Mesh(tireGeometry, tireMaterial);
+                wheelComplete.add(tire);
+
+                // Add rim
+                const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+                wheelComplete.add(rim);
+
+                // Add more spokes (12 instead of 8)
+                for (let i = 0; i < 12; i++) {
+                    const spoke = new THREE.Mesh(spokeGeometry, spokeMaterial);
+                    spoke.rotation.z = (i * Math.PI) / 6;
+                    wheelComplete.add(spoke);
+                }
+
+                wheelComplete.rotation.y = Math.PI / 2;
+                wheelComplete.position.set(x, -0.2, 0);
+                bikeGroup.add(wheelComplete);
+            });
+
+            // Add brake discs with better detail
+            const brakeGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.02, 16);
+            const brakeMaterial = new THREE.MeshStandardMaterial({
+                color: 0xCCCCCC,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+
+            [-0.45, 0.45].forEach(x => {
+                const brake = new THREE.Mesh(brakeGeometry, brakeMaterial);
+                brake.rotation.z = Math.PI / 2;
+                brake.position.set(x, -0.2, 0);
+                bikeGroup.add(brake);
+            });
+
+            // Enhanced headlight
+            const headlightGroup = new THREE.Group();
+            const headlightGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16);
+            const headlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                metalness: 0.9,
+                roughness: 0.1,
+                emissive: 0xFFFFFF,
+                emissiveIntensity: 0.5
+            });
+            const headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            headlight.rotation.z = Math.PI / 2;
+            headlight.position.set(0.6, 0.3, 0);
+            headlightGroup.add(headlight);
+
+            // Add headlight casing
+            const headlightCasingGeometry = new THREE.CylinderGeometry(0.09, 0.09, 0.04, 16);
+            const headlightCasing = new THREE.Mesh(headlightCasingGeometry, bikeMaterial);
+            headlightCasing.rotation.z = Math.PI / 2;
+            headlightCasing.position.set(0.62, 0.3, 0);
+            headlightGroup.add(headlightCasing);
+            bikeGroup.add(headlightGroup);
+
+            // Enhanced tail light
+            const tailLightGroup = new THREE.Group();
+            const tailLightGeometry = new THREE.BoxGeometry(0.12, 0.05, 0.2);
+            const tailLightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFF0000,
+                metalness: 0.9,
+                roughness: 0.1,
+                emissive: 0xFF0000,
+                emissiveIntensity: 0.5
+            });
+            const tailLight = new THREE.Mesh(tailLightGeometry, tailLightMaterial);
+            tailLight.position.set(-0.4, 0.3, 0);
+            tailLightGroup.add(tailLight);
+
+            // Add tail light casing
+            const tailLightCasingGeometry = new THREE.BoxGeometry(0.14, 0.07, 0.22);
+            const tailLightCasing = new THREE.Mesh(tailLightCasingGeometry, bikeMaterial);
+            tailLightCasing.position.set(-0.41, 0.3, 0);
+            tailLightGroup.add(tailLightCasing);
+            bikeGroup.add(tailLightGroup);
+
+            // Scale and add the complete bike to player group
+            bikeGroup.scale.set(1, 1, 0.8);
+            player.add(bikeGroup);
+
+            // Create enhanced rider
+            const riderGroup = new THREE.Group();
+
+            // Body with better proportions
+            const torsoGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8);
+            const riderMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2244AA, // Blue jacket
+                roughness: 0.8
+            });
+            const torso = new THREE.Mesh(torsoGeometry, riderMaterial);
+            torso.position.y = 0.5;
+            torso.rotation.x = Math.PI / 6; // Lean forward
+            riderGroup.add(torso);
+
+            // Add spherical caps to torso for smoother look
+            const topSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 8, 8),
+                riderMaterial
+            );
+            topSphere.position.y = 0.7;
+            topSphere.rotation.x = Math.PI / 6;
+            riderGroup.add(topSphere);
+
+            const bottomSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 8, 8),
+                riderMaterial
+            );
+            bottomSphere.position.y = 0.3;
+            riderGroup.add(bottomSphere);
+
+            // Head with Zomato red helmet
+            const helmetGroup = new THREE.Group();
+            
+            // Base helmet in Zomato red
+            const helmetGeometry = new THREE.SphereGeometry(0.15, 12, 12);
+            const helmetMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.PRIMARY, // Zomato red
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+            helmet.scale.set(1, 0.8, 1);
+            helmetGroup.add(helmet);
+
+            // Add helmet visor
+            const visorGeometry = new THREE.SphereGeometry(0.12, 12, 12, 0, Math.PI * 2, 0, Math.PI / 3);
+            const visorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                metalness: 0.9,
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.7
+            });
+            const visor = new THREE.Mesh(visorGeometry, visorMaterial);
+            visor.position.z = 0.04;
+            visor.rotation.x = -0.3;
+            helmetGroup.add(visor);
+
+            // Add Zomato logo on helmet sides
+            const logoGeometry = new THREE.PlaneGeometry(0.08, 0.08);
+            const logoMaterial = new THREE.MeshBasicMaterial({
+                color: 0xFFFFFF,
+                side: THREE.DoubleSide
+            });
+            [-1, 1].forEach(x => {
+                const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+                logo.position.set(x * 0.15, 0, 0);
+                logo.rotation.y = x * Math.PI / 2;
+                helmetGroup.add(logo);
+            });
+
+            helmetGroup.position.set(0, 0.92, -0.1);
+            riderGroup.add(helmetGroup);
+
+            // Enhanced arms with better joints
+            const armGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8);
+            const armMaterial = riderMaterial;
+            
+            [-0.2, 0.2].forEach(x => {
+                const armGroup = new THREE.Group();
+                
+                // Upper arm
+                const upperArm = new THREE.Mesh(armGeometry, armMaterial);
+                upperArm.position.set(0, -0.15, 0);
+                armGroup.add(upperArm);
+
+                // Elbow joint
+                const elbowJoint = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.05, 8, 8),
+                    armMaterial
+                );
+                armGroup.add(elbowJoint);
+
+                // Forearm
+                const forearm = new THREE.Mesh(armGeometry, armMaterial);
+                forearm.position.set(0, 0.15, 0);
+                armGroup.add(forearm);
+
+                armGroup.position.set(x, 0.6, 0);
+                armGroup.rotation.z = x > 0 ? -Math.PI / 4 : Math.PI / 4;
+                riderGroup.add(armGroup);
+            });
+
+            // Enhanced legs with better joints
+            const legGeometry = new THREE.CylinderGeometry(0.07, 0.07, 0.4, 8);
+            const legMaterial = new THREE.MeshStandardMaterial({ color: 0x1A237E }); // Dark blue pants
+            
+            [-0.1, 0.1].forEach(x => {
+                const legGroup = new THREE.Group();
+                
+                // Upper leg
+                const upperLeg = new THREE.Mesh(legGeometry, legMaterial);
+                upperLeg.position.set(0, -0.2, 0);
+                legGroup.add(upperLeg);
+
+                // Knee joint
+                const kneeJoint = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.07, 8, 8),
+                    legMaterial
+                );
+                legGroup.add(kneeJoint);
+
+                // Lower leg
+                const lowerLeg = new THREE.Mesh(legGeometry, legMaterial);
+                lowerLeg.position.set(0, 0.2, 0);
+                legGroup.add(lowerLeg);
+
+                legGroup.position.set(x, 0.2, 0);
+                legGroup.rotation.z = x > 0 ? Math.PI / 6 : -Math.PI / 6;
+                riderGroup.add(legGroup);
+            });
+
+            // Enhanced delivery bag
+            const bagGroup = new THREE.Group();
+            
+            // Main bag with Zomato branding
+            const bagGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.3);
+            const bagMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.PRIMARY,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+            const bag = new THREE.Mesh(bagGeometry, bagMaterial);
+            bagGroup.add(bag);
+
+            // Add bag straps
+            const strapGeometry = new THREE.BoxGeometry(0.05, 0.4, 0.05);
+            const strapMaterial = bagMaterial;
+            
+            [-0.15, 0.15].forEach(x => {
+                const strap = new THREE.Mesh(strapGeometry, strapMaterial);
+                strap.position.set(x, 0.2, 0);
+                bagGroup.add(strap);
+            });
+
+            // Add Zomato logo to bag
+            const bagLogoGeometry = new THREE.PlaneGeometry(0.2, 0.2);
+            const bagLogoMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xFFFFFF,
+                transparent: true,
+                opacity: 0.9
+            });
+            const bagLogo = new THREE.Mesh(bagLogoGeometry, bagLogoMaterial);
+            bagLogo.position.set(0, 0, 0.151);
+            bagGroup.add(bagLogo);
+
+            bagGroup.position.set(0, 0.5, -0.3);
+            bagGroup.isDeliveryBag = true;
+            riderGroup.add(bagGroup);
+
+            // Add rider to player group
+            player.add(riderGroup);
+
+            // Add player to scene
+            scene.add(player);
+            player.position.y = 0.5;
+        }
+
+        function createVehicle() {
+            const vehicleType = VEHICLE_TYPES[Math.floor(Math.random() * VEHICLE_TYPES.length)];
+            const vehicle = new THREE.Group();
+            
+            // Vehicle body
+            const bodyGeometry = new THREE.BoxGeometry(vehicleType.width, 1, vehicleType.length);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: vehicleType.color,
+                metalness: 0.6,
+                roughness: 0.4
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            vehicle.add(body);
+
+            // Add wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            
+            [-1, 1].forEach(x => {
+                [-1, 1].forEach(z => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.position.set(
+                        x * (vehicleType.width / 2 + 0.1),
+                        -0.3,
+                        z * (vehicleType.length / 3)
+                    );
+                    vehicle.add(wheel);
+                });
+            });
+
+            // Set random position and direction
+            const isHorizontal = Math.random() < 0.5;
+            const position = (Math.random() - 0.5) * 20; // Reduced from 40 to 20
+            const direction = Math.random() < 0.5 ? 1 : -1;
+
+            if (isHorizontal) {
+                vehicle.position.set(-15 * direction, 0.6, position); // Reduced from -25 to -15
+                vehicle.rotation.y = direction > 0 ? -Math.PI / 2 : Math.PI / 2;
+            } else {
+                vehicle.position.set(position, 0.6, -15 * direction); // Reduced from -25 to -15
+                vehicle.rotation.y = direction > 0 ? Math.PI : 0;
+            }
+
+            vehicle.speed = 0.1 + Math.random() * 0.1;
+            vehicle.direction = direction;
+            vehicle.isHorizontal = isHorizontal;
+            vehicle.userData = { type: 'vehicle' };  // Add userData
+
+            scene.add(vehicle);
+            vehicles.push(vehicle);
+            return vehicle;  // Return the vehicle object
+        }
+
+        function updateVehicles() {
+            vehicles.forEach((vehicle, index) => {
+                if (vehicle.isHorizontal) {
+                    vehicle.position.x += vehicle.speed * vehicle.direction;
+                    if (Math.abs(vehicle.position.x) > 25) {
+                        scene.remove(vehicle);
+                        vehicles.splice(index, 1);
+                    }
+                } else {
+                    vehicle.position.z += vehicle.speed * vehicle.direction;
+                    if (Math.abs(vehicle.position.z) > 25) {
+                        scene.remove(vehicle);
+                        vehicles.splice(index, 1);
+                    }
+                }
+
+                // Check collision with player
+                if (player.position.distanceTo(vehicle.position) < 1.5) {
+                    handleCollision(vehicle);
+                }
+            });
+
+            // Add new vehicles
+            if (vehicles.length < 5 && Math.random() < 0.02) {
+                createVehicle();
+            }
+        }
+
+        // Handle different types of collisions
+        function handleCollision(obstacle) {
+            // If player is invulnerable, ignore collision
+            if (gameState.isInvulnerable) {
+                return;
+            }
+
+            if (!obstacle || !obstacle.userData) {
+                console.warn('Invalid obstacle in handleCollision');
+                return;
+            }
+
+            let penalty = 10;
+            let message = '';
+
+            try {
+                switch(obstacle.userData.type) {
+                    case 'auto':
+                        penalty = 15;
+                        message = 'Arre Bhai! Auto rickshaw collision! -15 points';
+                        break;
+                    case 'cow':
+                        penalty = 20;
+                        message = 'Jai Gau Mata! Be careful! -20 points';
+                        break;
+                    case 'vehicle':
+                        penalty = 10;
+                        message = 'Traffic jam ho gaya! -10 points';
+                        break;
+                    default:
+                        message = 'Arey yaar! Collision! -10 points';
+                }
+
+                gameState.score = Math.max(0, gameState.score - penalty);
+                document.getElementById('score').textContent = `Score: ${gameState.score}`;
+                
+                if (typeof showMessage === 'function') {
+                    showMessage(message, '#FF4444');
+                }
+                showCollisionEffect();
+                consecutiveDeliveries = 0;
+
+                // Add invulnerability for 1.5 seconds
+                gameState.isInvulnerable = true;
+                setTimeout(() => {
+                    gameState.isInvulnerable = false;
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error in handleCollision:', error);
+            }
+        }
+
+        function updateDirectionArrow() {
+            // Since we've removed the direction arrow functionality in favor of the new highlighting system,
+            // this function is now empty
+            return;
+        }
+
+        function animate() {
+            try {
+                requestAnimationFrame(animate);
+
+                if (!scene || !camera || !renderer) {
+                    console.warn('Scene, camera, or renderer not initialized');
+                    return;
+                }
+
+                if (gameState.timeLeft > 0) {
+                    updatePlayer();
+                    checkCollisions();
+                    updateVehicles();
+                    updateObstacles();
+                    updateDirectionArrow();
+
+                    // Rotate power-ups for visual effect
+                    powerUps.forEach(powerUp => {
+                        if (powerUp && powerUp.rotation) {
+                            powerUp.rotation.y += 0.02;
+                        }
+                    });
+                }
+
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error('Error in animation loop:', error);
+            }
+        }
+
+        // Start the game with error handling
+        window.onload = function() {
+            try {
+                console.log('Window loaded, starting game...');
+                init();
+            } catch (error) {
+                console.error('Failed to start game:', error);
+                document.body.innerHTML += '<div style="color: white; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: Arial;">Failed to start the game. Please refresh the page.</div>';
+            }
+        };
+
+        // Add social sharing
+        function shareScore() {
+            const shareText = encodeURIComponent(
+                `🏍️ Scored ${gameState.score} points in Zomato Delivery Madness 3D!\n` +
+                `Completed ${consecutiveDeliveries} deliveries in a row!\n` +
+                `Can you beat my score? 🎮\n` +
+                `Play now: [game_url]`
+            );
+            window.open(`https://twitter.com/intent/tweet?text=${shareText}`);
+        }
+
+        // Add achievement system
+        function addAchievement(name, description) {
+            const achievement = { name, description, timestamp: new Date() };
+            achievements.push(achievement);
+            
+            // Show achievement notification
+            const notification = document.createElement('div');
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            notification.style.color = '#FFD700';
+            notification.style.padding = '15px';
+            notification.style.borderRadius = '10px';
+            notification.style.zIndex = '1000';
+            notification.innerHTML = `
+                <h3>🏆 Achievement Unlocked!</h3>
+                <p>${name}</p>
+                <p>${description}</p>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transition = 'opacity 1s';
+                notification.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(notification), 1000);
+            }, 3000);
+        }
+
+        // Add special obstacles
+        function createAutoRickshaw() {
+            const auto = new THREE.Group();
+            
+            // Auto body
+            const bodyGeometry = new THREE.BoxGeometry(1.2, 1.2, 2);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.AUTO,
+                metalness: 0.3,
+                roughness: 0.7
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            auto.add(body);
+
+            // Auto roof
+            const roofGeometry = new THREE.BoxGeometry(1.2, 0.4, 1);
+            const roof = new THREE.Mesh(roofGeometry, bodyMaterial);
+            roof.position.y = 0.8;
+            roof.position.z = -0.5;
+            auto.add(roof);
+
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            [-1, 1].forEach(x => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(x * 0.6, -0.4, 0);
+                auto.add(wheel);
+            });
+
+            const backWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            backWheel.rotation.z = Math.PI / 2;
+            backWheel.position.set(0, -0.4, -0.8);
+            auto.add(backWheel);
+
+            auto.userData.type = 'auto';
+            auto.userData.erratic = true;
+            return auto;
+        }
+
+        function createCow() {
+            const cow = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(1, 1.2, 2);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.COW,
+                metalness: 0.1,
+                roughness: 0.9
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            cow.add(body);
+
+            // Head
+            const headGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.8);
+            const head = new THREE.Mesh(headGeometry, bodyMaterial);
+            head.position.set(0, 0.3, 0.9);
+            cow.add(head);
+
+            // Legs
+            const legGeometry = new THREE.BoxGeometry(0.2, 0.6, 0.2);
+            [-1, 1].forEach(x => {
+                [-1, 1].forEach(z => {
+                    const leg = new THREE.Mesh(legGeometry, bodyMaterial);
+                    leg.position.set(x * 0.4, -0.9, z * 0.8);
+                    cow.add(leg);
+                });
+            });
+
+            cow.userData.type = 'cow';
+            cow.userData.peaceful = true;
+            return cow;
+        }
+
+        function createStreetVendor() {
+            const vendor = new THREE.Group();
+            
+            // Cart with more Indian street food cart style
+            const cartGeometry = new THREE.BoxGeometry(1.5, 1, 2);
+            const cartMaterial = new THREE.MeshStandardMaterial({ 
+                color: COLORS.VENDOR,
+                metalness: 0.3,
+                roughness: 0.7
+            });
+            const cart = new THREE.Mesh(cartGeometry, cartMaterial);
+            vendor.add(cart);
+
+            // Add traditional Indian umbrella (more colorful)
+            const umbrellaGeometry = new THREE.ConeGeometry(2, 0.5, 8);
+            const umbrellaMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xFF5733, // Bright orange
+                metalness: 0.1,
+                roughness: 0.9
+            });
+            const umbrella = new THREE.Mesh(umbrellaGeometry, umbrellaMaterial);
+            umbrella.position.y = 2;
+            vendor.add(umbrella);
+
+            // Add decorative elements like food display
+            const displayGeometry = new THREE.BoxGeometry(1.2, 0.2, 1.5);
+            const displayMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFFD700, // Gold for food display
+                metalness: 0.4,
+                roughness: 0.6
+            });
+            const display = new THREE.Mesh(displayGeometry, displayMaterial);
+            display.position.set(0, 0.6, 0);
+            vendor.add(display);
+
+            // Add small food items on display
+            for(let i = 0; i < 6; i++) {
+                const foodGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const foodMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xFF9933, // Saffron for food items
+                    metalness: 0.2,
+                    roughness: 0.8
+                });
+                const foodItem = new THREE.Mesh(foodGeometry, foodMaterial);
+                foodItem.position.set(
+                    (Math.random() - 0.5) * 0.8,
+                    0.7,
+                    (Math.random() - 0.5) * 1.2
+                );
+                vendor.add(foodItem);
+            }
+
+            vendor.userData.type = 'vendor';
+            vendor.userData.bonus = true;
+            return vendor;
+        }
+
+        // Create ground with Indian street texture
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);  // Match the wall size
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B7355,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+
+            // Add random patches to simulate Indian street texture
+            for(let i = 0; i < 150; i++) {  // Increased number of patches for larger area
+                const patchGeometry = new THREE.CircleGeometry(Math.random() * 0.5 + 0.2, 6);
+                const patchMaterial = new THREE.MeshStandardMaterial({
+                    color: Math.random() > 0.5 ? 0x7A6B56 : 0x9B8B75,
+                    roughness: 1,
+                    metalness: 0
+                });
+                const patch = new THREE.Mesh(patchGeometry, patchMaterial);
+                patch.rotation.x = -Math.PI / 2;
+                patch.position.set(
+                    (Math.random() - 0.5) * 44,  // Increased range to match new city size
+                    0.01,
+                    (Math.random() - 0.5) * 44
+                );
+                ground.add(patch);
+            }
+
+            return ground;
+        }
+
+        // Update vehicle creation to include new obstacles
+        function createObstacle() {
+            const types = ['auto', 'cow', 'vendor', 'vehicle'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            let obstacle;
+            switch(type) {
+                case 'auto':
+                    obstacle = createAutoRickshaw();
+                    break;
+                case 'cow':
+                    obstacle = createCow();
+                    break;
+                case 'vendor':
+                    obstacle = createStreetVendor();
+                    break;
+                default:
+                    obstacle = createVehicle();
+                    break;
+            }
+
+            // Check if obstacle creation failed
+            if (!obstacle) {
+                console.error('Failed to create obstacle of type:', type);
+                return null;
+            }
+
+            // Set random position and direction
+            const isHorizontal = Math.random() < 0.5;
+            const position = (Math.random() - 0.5) * 20; // Reduced from 40 to 20
+            const direction = Math.random() < 0.5 ? 1 : -1;
+
+            if (isHorizontal) {
+                obstacle.position.set(-15 * direction, 0.6, position); // Reduced from -25 to -15
+                obstacle.rotation.y = direction > 0 ? -Math.PI / 2 : Math.PI / 2;
+            } else {
+                obstacle.position.set(position, 0.6, -15 * direction); // Reduced from -25 to -15
+                obstacle.rotation.y = direction > 0 ? Math.PI : 0;
+            }
+
+            // Add movement properties
+            obstacle.speed = 0.1 + Math.random() * 0.1;
+            obstacle.direction = direction;
+            obstacle.isHorizontal = isHorizontal;
+            
+            // Add erratic movement for auto-rickshaws
+            if (obstacle.userData.type === 'auto') {
+                obstacle.zigzagPhase = 0;
+                obstacle.zigzagSpeed = 0.05;
+            }
+
+            scene.add(obstacle);
+            specialObstacles.push(obstacle);
+            return obstacle;
+        }
+
+        // Update the update function to handle special obstacles
+        function updateObstacles() {
+            specialObstacles.forEach((obstacle, index) => {
+                // Basic movement
+                if (obstacle.isHorizontal) {
+                    obstacle.position.x += obstacle.speed * obstacle.direction;
+                    
+                    // Zigzag movement for auto-rickshaws
+                    if (obstacle.userData.type === 'auto') {
+                        obstacle.position.z += Math.sin(obstacle.zigzagPhase) * obstacle.zigzagSpeed;
+                        obstacle.zigzagPhase += 0.1;
+                    }
+                    
+                    if (Math.abs(obstacle.position.x) > 25) {
+                        scene.remove(obstacle);
+                        specialObstacles.splice(index, 1);
+                    }
+                } else {
+                    obstacle.position.z += obstacle.speed * obstacle.direction;
+                    
+                    // Zigzag movement for auto-rickshaws
+                    if (obstacle.userData.type === 'auto') {
+                        obstacle.position.x += Math.sin(obstacle.zigzagPhase) * obstacle.zigzagSpeed;
+                        obstacle.zigzagPhase += 0.1;
+                    }
+                    
+                    if (Math.abs(obstacle.position.z) > 25) {
+                        scene.remove(obstacle);
+                        specialObstacles.splice(index, 1);
+                    }
+                }
+
+                // Random stops for cows
+                if (obstacle.userData.type === 'cow' && Math.random() < 0.01) {
+                    obstacle.speed = obstacle.speed === 0 ? 0.1 : 0;
+                }
+
+                // Check collision with player
+                if (obstacle && obstacle.position && player.position.distanceTo(obstacle.position) < 1.5) {
+                    if (obstacle.userData && obstacle.userData.bonus) {
+                        handleBonus(obstacle);
+                    } else if (obstacle.userData && obstacle.userData.type) {
+                        handleCollision(obstacle);
+                    }
+                }
+            });
+
+            // Add new obstacles - reduced max obstacles from 8 to 4 and spawn rate from 0.02 to 0.01
+            if (specialObstacles.length < 4 && Math.random() < 0.01) {
+                createObstacle();
+            }
+        }
+
+        // Handle different types of collisions
+        function handleCollision(obstacle) {
+            // If player is invulnerable, ignore collision
+            if (gameState.isInvulnerable) {
+                return;
+            }
+
+            if (!obstacle || !obstacle.userData) {
+                console.warn('Invalid obstacle in handleCollision');
+                return;
+            }
+
+            let penalty = 10;
+            let message = '';
+
+            try {
+                switch(obstacle.userData.type) {
+                    case 'auto':
+                        penalty = 15;
+                        message = 'Arre Bhai! Auto rickshaw collision! -15 points';
+                        break;
+                    case 'cow':
+                        penalty = 20;
+                        message = 'Jai Gau Mata! Be careful! -20 points';
+                        break;
+                    case 'vehicle':
+                        penalty = 10;
+                        message = 'Traffic jam ho gaya! -10 points';
+                        break;
+                    default:
+                        message = 'Arey yaar! Collision! -10 points';
+                }
+
+                gameState.score = Math.max(0, gameState.score - penalty);
+                document.getElementById('score').textContent = `Score: ${gameState.score}`;
+                
+                if (typeof showMessage === 'function') {
+                    showMessage(message, '#FF4444');
+                }
+                showCollisionEffect();
+                consecutiveDeliveries = 0;
+
+                // Add invulnerability for 1.5 seconds
+                gameState.isInvulnerable = true;
+                setTimeout(() => {
+                    gameState.isInvulnerable = false;
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error in handleCollision:', error);
+            }
+        }
+
+        // Handle bonus points from vendors
+        function handleBonus(obstacle) {
+            // If player is invulnerable, ignore bonus collection
+            if (gameState.isInvulnerable) {
+                return;
+            }
+
+            const bonus = 25;
+            gameState.score += bonus;
+            document.getElementById('score').textContent = `Score: ${gameState.score}`;
+            
+            const bonusMessages = [
+                'Masala Bonus! +25 points',
+                'Chatpata Bonus! +25 points',
+                'Desi Style! +25 points',
+                'Ekdum Jhakaas! +25 points'
+            ];
+            
+            showMessage(bonusMessages[Math.floor(Math.random() * bonusMessages.length)], '#4CAF50');
+            showBonusEffect();
+
+            // Add invulnerability for 1.5 seconds
+            gameState.isInvulnerable = true;
+            setTimeout(() => {
+                gameState.isInvulnerable = false;
+            }, 1500);
+        }
+
+        // Show message popup
+        function showMessage(text, color) {
+            try {
+                if (!messageQueue) {
+                    console.warn('messageQueue not initialized');
+                    return;
+                }
+
+                const container = document.getElementById('message-queue');
+                if (!container) {
+                    console.warn('message-queue container not found');
+                    return;
+                }
+
+                const message = document.createElement('div');
+                message.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+                message.style.color = color;
+                message.style.fontSize = '16px';
+                message.style.fontFamily = 'Arial, sans-serif';
+                message.style.fontWeight = '500';
+                message.style.padding = '12px 20px';
+                message.style.borderRadius = '8px';
+                message.style.marginBottom = '8px';
+                message.style.opacity = '0';
+                message.style.transform = 'translateX(-20px)';
+                message.style.transition = 'all 0.3s ease-out';
+                message.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+                message.style.borderLeft = `4px solid ${color}`;
+                message.style.backdropFilter = 'blur(8px)';
+                message.textContent = text;
+                
+                messageQueue.push(message);
+                if (messageQueue.length > MAX_MESSAGES) {
+                    const oldestMessage = messageQueue.shift();
+                    if (oldestMessage && oldestMessage.parentNode) {
+                        oldestMessage.style.opacity = '0';
+                        oldestMessage.style.transform = 'translateX(-20px)';
+                        setTimeout(() => {
+                            oldestMessage.remove();
+                        }, 300);
+                    }
+                }
+                
+                container.appendChild(message);
+                
+                // Trigger animation
+                requestAnimationFrame(() => {
+                    message.style.opacity = '1';
+                    message.style.transform = 'translateX(0)';
+                });
+                
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        if (messageQueue.includes(message)) {
+                            messageQueue = messageQueue.filter(m => m !== message);
+                            if (message.parentNode) {
+                                message.remove();
+                            }
+                        }
+                    }, 300);
+                }, 3000);
+            } catch (error) {
+                console.error('Error in showMessage:', error);
+            }
+        }
+
+        // Show collision effect
+        function showCollisionEffect() {
+            const flash = document.createElement('div');
+            flash.style.position = 'fixed';
+            flash.style.top = '0';
+            flash.style.left = '0';
+            flash.style.width = '100%';
+            flash.style.height = '100%';
+            flash.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            flash.style.zIndex = '99';
+            document.body.appendChild(flash);
+            
+            // Add invulnerability visual effect
+            if (player) {
+                const originalMaterials = [];
+                player.traverse((child) => {
+                    if (child.isMesh) {
+                        originalMaterials.push({
+                            mesh: child,
+                            material: child.material.clone()
+                        });
+                        child.material.opacity = 0.5;
+                        child.material.transparent = true;
+                    }
+                });
+
+                // Restore original materials after invulnerability ends
+                setTimeout(() => {
+                    originalMaterials.forEach(({mesh, material}) => {
+                        mesh.material = material;
+                    });
+                }, 1500);
+            }
+            
+            setTimeout(() => {
+                document.body.removeChild(flash);
+            }, 300);
+        }
+
+        // Show bonus effect
+        function showBonusEffect() {
+            const flash = document.createElement('div');
+            flash.style.position = 'fixed';
+            flash.style.top = '0';
+            flash.style.left = '0';
+            flash.style.width = '100%';
+            flash.style.height = '100%';
+            flash.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
+            flash.style.zIndex = '99';
+            document.body.appendChild(flash);
+            
+            setTimeout(() => {
+                document.body.removeChild(flash);
+            }, 300);
+        }
+
+        // Achievement triggers
+        function checkAchievements() {
+            // Delivery achievements
+            if (consecutiveDeliveries === 5) {
+                addAchievement('Delivery Master', 'Complete 5 deliveries in a row!');
+            }
+            
+            // Score achievements
+            if (gameState.score >= 1000) {
+                addAchievement('Score Champion', 'Reach 1000 points!');
+            }
+        }
+
+        // Update checkCollisions to include achievement checks
+        const originalCheckCollisions = checkCollisions;
+        checkCollisions = function() {
+            originalCheckCollisions();
+            checkAchievements();
+        };
+
+        // Add new function to highlight next restaurant
+        function highlightNextRestaurant(restaurant) {
+            // Reset all restaurants
+            restaurants.forEach(r => {
+                if (r.outline) {
+                    scene.remove(r.outline);
+                    r.outline = null;
+                }
+                if (r.arrow) {
+                    scene.remove(r.arrow);
+                    r.arrow = null;
+                }
+            });
+
+            // If no specific restaurant is provided, randomly select one
+            if (!restaurant) {
+                // 50% chance to pick from quick commerce, 50% from regular restaurants
+                const isQuickCommerce = Math.random() < 0.5;
+                const availableRestaurants = restaurants.filter(r => 
+                    isQuickCommerce ? r.foodType.name === "Quick Commerce" : r.foodType.name !== "Quick Commerce"
+                );
+                
+                // If no restaurants of the chosen type are available, pick from any restaurant
+                restaurant = availableRestaurants.length > 0 ? 
+                    availableRestaurants[Math.floor(Math.random() * availableRestaurants.length)] :
+                    restaurants[Math.floor(Math.random() * restaurants.length)];
+            }
+
+            if (restaurant) {
+                // Add blue arrow above restaurant
+                const arrowGeometry = new THREE.ConeGeometry(0.3, 0.6, 4);
+                const arrowMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x0000FF,  // Blue arrow
+                    metalness: 0.3,
+                    roughness: 0.7
+                });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.position.copy(restaurant.position);
+                arrow.position.y = 3;  // Position above the restaurant
+                arrow.rotation.x = Math.PI;  // Point downward
+                scene.add(arrow);
+                restaurant.arrow = arrow;
+
+                // Add outline effect
+                const outlineGeometry = new THREE.BoxGeometry(2, 2, 2);
+                const outlineMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x0000FF,  // Blue outline
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+                outline.position.copy(restaurant.position);
+                outline.scale.set(1.2, 1.2, 1.2);
+                scene.add(outline);
+                restaurant.outline = outline;
+            }
+            nextRestaurant = restaurant;  // Update the next restaurant to pick up from
+        }
+
+        // Add message queue system variables
+       
+        function createBoundaryWalls() {
+            const wallHeight = 4;
+            const wallThickness = 1.5;
+            const citySize = 44;  // Increased from 35 to 44 (25% larger)
+            const groundSize = 50;  // Match the ground plane size
+            const wallMaterial = new THREE.MeshStandardMaterial({
+                color: 0xF5F5F5,
+                metalness: 0.2,
+                roughness: 0.8,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            // Create four walls
+            const walls = [];
+            
+            // North wall
+            const northWall = new THREE.Mesh(
+                new THREE.BoxGeometry(groundSize + wallThickness, wallHeight, wallThickness),
+                wallMaterial
+            );
+            northWall.position.set(0, wallHeight/2, -citySize/2);
+            scene.add(northWall);
+            walls.push(northWall);
+
+            // South wall
+            const southWall = new THREE.Mesh(
+                new THREE.BoxGeometry(groundSize + wallThickness, wallHeight, wallThickness),
+                wallMaterial
+            );
+            southWall.position.set(0, wallHeight/2, citySize/2);
+            scene.add(southWall);
+            walls.push(southWall);
+
+            // East wall
+            const eastWall = new THREE.Mesh(
+                new THREE.BoxGeometry(wallThickness, wallHeight, groundSize + wallThickness),
+                wallMaterial
+            );
+            eastWall.position.set(citySize/2, wallHeight/2, 0);
+            scene.add(eastWall);
+            walls.push(eastWall);
+
+            // West wall
+            const westWall = new THREE.Mesh(
+                new THREE.BoxGeometry(wallThickness, wallHeight, groundSize + wallThickness),
+                wallMaterial
+            );
+            westWall.position.set(-citySize/2, wallHeight/2, 0);
+            scene.add(westWall);
+            walls.push(westWall);
+
+            // Add decorative elements to walls
+            walls.forEach(wall => {
+                // Add pillars at intervals
+                const pillarSpacing = 5;  // Increased spacing for larger area
+                const pillarSize = 0.4;
+                const pillarHeight = wallHeight + 0.8;
+                const pillarGeometry = new THREE.BoxGeometry(pillarSize, pillarHeight, pillarSize);
+                const pillarMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xE5E5E5,
+                    metalness: 0.3,
+                    roughness: 0.7
+                });
+
+                const isHorizontal = wall.geometry.parameters.width > wall.geometry.parameters.depth;
+                const length = isHorizontal ? wall.geometry.parameters.width : wall.geometry.parameters.depth;
+                const numPillars = Math.floor(length / pillarSpacing) - 1;
+
+                for (let i = -numPillars/2; i <= numPillars/2; i++) {
+                    const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+                    pillar.position.y = wallHeight/2;
+                    
+                    if (isHorizontal) {
+                        pillar.position.x = i * pillarSpacing;
+                        pillar.position.z = wall.position.z;
+                    } else {
+                        pillar.position.x = wall.position.x;
+                        pillar.position.z = i * pillarSpacing;
+                    }
+                    
+                    scene.add(pillar);
+                }
+            });
+
+            return walls;
+        }
+
+        // Update the ground creation in init()
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);  // Match the wall size
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B7355,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+
+            // Add random patches to simulate Indian street texture
+            for(let i = 0; i < 150; i++) {  // Increased number of patches for larger area
+                const patchGeometry = new THREE.CircleGeometry(Math.random() * 0.5 + 0.2, 6);
+                const patchMaterial = new THREE.MeshStandardMaterial({
+                    color: Math.random() > 0.5 ? 0x7A6B56 : 0x9B8B75,
+                    roughness: 1,
+                    metalness: 0
+                });
+                const patch = new THREE.Mesh(patchGeometry, patchMaterial);
+                patch.rotation.x = -Math.PI / 2;
+                patch.position.set(
+                    (Math.random() - 0.5) * 44,  // Increased range to match new city size
+                    0.01,
+                    (Math.random() - 0.5) * 44
+                );
+                ground.add(patch);
+            }
+
+            return ground;
+        }
+    </script>
+    <!-- Add message queue container to the body -->
+    <div id="message-queue" style="
+        position: fixed;
+        left: 20px;
+        top: 150px;
+        width: 400px;
+        z-index: 1000;
+    "></div>
+</body>
+</html>
