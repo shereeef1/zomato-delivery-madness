@@ -1,0 +1,7 @@
+FIREBASE_API_KEY=AIzaSyAi4YDMAcbMnQBkDrS3tfyG-fO33-fOKtc
+FIREBASE_AUTH_DOMAIN=indian-delivery-madness.firebaseapp.com
+FIREBASE_DATABASE_URL=https://indian-delivery-madness-default-rtdb.asia-southeast1.firebasedatabase.app
+FIREBASE_PROJECT_ID=indian-delivery-madness
+FIREBASE_STORAGE_BUCKET=indian-delivery-madness.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=125061210997
+FIREBASE_APP_ID=1:125061210997:web:401819002f8bb3017fe93c

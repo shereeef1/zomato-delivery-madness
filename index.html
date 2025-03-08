@@ -430,29 +430,51 @@
         }
     </style>
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script>
-        // Replace this entire firebaseConfig object with the one from your Firebase Console
-        // To get this:
-        // 1. Go to Firebase Console
-        // 2. Click on the gear icon next to "Project Overview"
-        // 3. Click "Project Settings"
-        // 4. Scroll down to "Your apps" section
-        // 5. Copy the firebaseConfig object
+        // Your web app's Firebase configuration
         const firebaseConfig = {
-            apiKey: "REPLACE_WITH_YOUR_API_KEY",
-            authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-            databaseURL: "REPLACE_WITH_YOUR_DATABASE_URL",
-            projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-            storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-            messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-            appId: "REPLACE_WITH_YOUR_APP_ID"
+            apiKey: "AIzaSyAi4YDMAcbMnQBkDrS3tfyG-fO33-fOKtc",
+            authDomain: "indian-delivery-madness.firebaseapp.com",
+            databaseURL: "https://indian-delivery-madness-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "indian-delivery-madness",
+            storageBucket: "indian-delivery-madness.firebasestorage.app",
+            messagingSenderId: "125061210997",
+            appId: "1:125061210997:web:401819002f8bb3017fe93c"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        // Firebase helper functions
+        async function saveScore(username, score) {
+            const scoresRef = db.ref('highScores');
+            const newScore = {
+                username: username || 'Anonymous',
+                score: score,
+                timestamp: Date.now()
+            };
+            await scoresRef.push(newScore);
+        }
+
+        async function getHighScores() {
+            const scoresRef = db.ref('highScores');
+            const snapshot = await scoresRef.orderByChild('score')
+                                         .limitToLast(10)
+                                         .once('value');
+            const scores = [];
+            snapshot.forEach((childSnapshot) => {
+                scores.push(childSnapshot.val());
+            });
+            return scores.reverse();
+        }
+
+        async function updateGameCounter() {
+            const counterRef = db.ref('gameCounter');
+            await counterRef.transaction((currentCount) => (currentCount || 0) + 1);
+        }
     </script>
 </head>
 <body>
@@ -1770,14 +1792,10 @@
         getGlobalGamesCount();
 
         function endGame() {
-            // Update personal counter
-            totalGamesPlayed++;
-            localStorage.setItem('totalGamesPlayed', totalGamesPlayed);
+            const finalScore = gameState.score;
             
-            // Update global counter
-            incrementGlobalGamesCount();
-            
-            saveHighScore(gameState.score);
+            // Update game counters
+            updateGameCounter();  // Update Firebase global counter
             
             const endScreen = document.createElement('div');
             endScreen.style.position = 'fixed';
@@ -1795,69 +1813,78 @@
             endScreen.style.width = isMobile() ? '90%' : 'auto';
             endScreen.style.maxWidth = '400px';
 
-            let content = `<h1 style="color: #E23744">Game Over!</h1>`;
-            content += `<p>Final Score: ${gameState.score}</p>`;
-            if (highScores.length === 0 || gameState.score > highScores[0].score) {
-                content += '<p style="color: #FFD700">New High Score! 🏆</p>';
-            }
+            const username = prompt('Game Over! Enter your name for the high scores:');
             
-            // Add game statistics with both personal and global counts
-            content += `
-                <div style="
-                    margin: 15px 0;
-                    padding: 15px;
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 8px;
-                    font-size: ${isMobile() ? '16px' : '20px'};
-                    display: flex;
-                    justify-content: space-around;
-                    align-items: center;
-                ">
-                    <div>
-                        <div style="color: #FFD700;">🎮 Your Games</div>
-                        <div>${totalGamesPlayed}</div>
-                    </div>
-                    <div>
-                        <div style="color: #FFD700;">🌎 All Games</div>
-                        <div class="global-games-count">${globalGamesPlayed}</div>
-                    </div>
-                </div>
-            `;
-            
-            content += `
-                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <button id="viewScores" style="
-                        margin: 10px;
-                        padding: 8px 16px;
-                        background: #E23744;
-                        border: none;
-                        color: white;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: ${isMobile() ? '14px' : '16px'};
-                    ">View High Scores</button>
-                    <button id="playAgain" style="
-                        margin: 10px;
-                        padding: 8px 16px;
-                        background: #32CD32;
-                        border: none;
-                        color: white;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: ${isMobile() ? '14px' : '16px'};
-                    ">Play Again</button>
-                </div>`;
-            
-            endScreen.innerHTML = content;
-            document.body.appendChild(endScreen);
+            // Save score to Firebase
+            saveScore(username, finalScore).then(() => {
+                // Get high scores and game counter
+                Promise.all([
+                    getHighScores(),
+                    db.ref('gameCounter').once('value')
+                ]).then(([highScores, counterSnapshot]) => {
+                    const totalGames = counterSnapshot.val() || 0;
+                    
+                    let content = `<h1 style="color: #E23744">Game Over!</h1>`;
+                    content += `<p>Final Score: ${finalScore}</p>`;
+                    
+                    if (highScores.length === 0 || finalScore > highScores[0].score) {
+                        content += '<p style="color: #FFD700">New High Score! 🏆</p>';
+                    }
+                    
+                    // Add game statistics
+                    content += `
+                        <div style="
+                            margin: 15px 0;
+                            padding: 15px;
+                            background: rgba(255,255,255,0.1);
+                            border-radius: 8px;
+                            font-size: ${isMobile() ? '16px' : '20px'};
+                        ">
+                            <div style="color: #FFD700;">🌎 Total Games Played</div>
+                            <div>${totalGames}</div>
+                        </div>
+                    `;
+                    
+                    // Add high scores section
+                    content += '<h3 style="color: #FFD700; margin-top: 20px;">Global High Scores</h3>';
+                    content += '<div style="max-height: 200px; overflow-y: auto;">';
+                    highScores.forEach((entry, index) => {
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                        content += `
+                            <div style="
+                                margin: 5px 0;
+                                padding: 8px;
+                                background: ${index === 0 ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
+                                border-radius: 5px;
+                                font-size: ${isMobile() ? '14px' : '16px'};
+                            ">
+                                ${medal} ${entry.username || 'Anonymous'} - ${entry.score}
+                            </div>
+                        `;
+                    });
+                    content += '</div>';
+                    
+                    content += `
+                        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                            <button id="playAgain" style="
+                                padding: 8px 16px;
+                                background: #32CD32;
+                                border: none;
+                                color: white;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-size: ${isMobile() ? '14px' : '16px'};
+                            ">Play Again</button>
+                        </div>`;
+                    
+                    endScreen.innerHTML = content;
+                    document.body.appendChild(endScreen);
 
-            document.getElementById('viewScores').onclick = () => {
-                showHighScores();
-            };
-
-            document.getElementById('playAgain').onclick = () => {
-                location.reload();
-            };
+                    document.getElementById('playAgain').onclick = () => {
+                        location.reload();
+                    };
+                });
+            });
         }
 
         function showDeliveryType(name, isPickup) {
